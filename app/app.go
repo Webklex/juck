@@ -87,6 +87,9 @@ func (a *Application) verify() error {
 			return errors.New("url list file is empty")
 		}
 		for _, _url := range list {
+			if _url == "" {
+				continue
+			}
 			u, err := url.Parse(_url)
 			if err != nil {
 				return err

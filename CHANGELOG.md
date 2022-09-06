@@ -8,6 +8,7 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 ## [UNRELEASED]
 ### Fixed
 - Add suffix to indirect resource references
+- Ignore empty urls
 
 ### Added
 - Delay downloads (e.g.: --delay 3s)
