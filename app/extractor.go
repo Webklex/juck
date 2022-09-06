@@ -91,6 +91,9 @@ func (e *Extractor) Extract(filename string) error {
 			log.Warning("skipping %s -  no content", sourcePath)
 			continue
 		}
+		if ext := filepath.Ext(sourcePath); ext == "" {
+			sourcePath = sourcePath + ".js"
+		}
 		if err := makeDirIfNotExist(filepath.Dir(sourcePath)); err != nil {
 			log.Error(err)
 		} else {
