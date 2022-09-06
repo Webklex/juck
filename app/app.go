@@ -171,11 +171,15 @@ func (a *Application) loadList(filepath string) ([]string, error) {
 // @param source string
 // @param filepath string
 // @return error
-func (a *Application) download(source, filepath string) error {
+func (a *Application) download(source, target string) error {
+	log.Info("Downloading: %s", source)
+	if err := makeDirIfNotExist(filepath.Dir(target)); err != nil {
+		return err
+	}
 	// Create the file
-	out, err := os.Create(filepath)
+	out, err := os.Create(target)
 	if err != nil {
-		_ = os.Remove(filepath)
+		_ = os.Remove(target)
 		return err
 	}
 	defer out.Close()
@@ -183,21 +187,21 @@ func (a *Application) download(source, filepath string) error {
 	// Get the data
 	resp, err := http.Get(source)
 	if err != nil {
-		_ = os.Remove(filepath)
+		_ = os.Remove(target)
 		return err
 	}
 	defer resp.Body.Close()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		_ = os.Remove(filepath)
+		_ = os.Remove(target)
 		return fmt.Errorf("failed to download: %s - %s", source, resp.Status)
 	}
 
 	// Writer the body to file
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		_ = os.Remove(filepath)
+		_ = os.Remove(target)
 		return err
 	}
 
