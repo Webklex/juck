@@ -9,15 +9,16 @@ go install github.com/webklex/juck
 ## Usage
 ```bash
 Usage of juck:
-  --file      string  Target sourcemap file path
-  --file-list string  File path of a file containing a list of target source map file paths
-  --url       string  Target sourcemap url
-  --url-list  string  File path of a file containing a list of target source map urls
-  --output    string  Directory to output from sourcemap to (default "./output")
-  --combined          Combine all source files into one
-  --disable-ssl       Don't verify the site's SSL certificate
-  --no-color          Disable color output
-  --version           Show version and exit
+  --file      string    Target sourcemap file path
+  --file-list string    File path of a file containing a list of target source map file paths
+  --url       string    Target sourcemap url
+  --delay     duration  Delay between two requests. Only applies if --url-list is used
+  --url-list  string    File path of a file containing a list of target source map urls
+  --output    string    Directory to output from sourcemap to (default "./output")
+  --combined            Combine all source files into one
+  --disable-ssl         Don't verify the site's SSL certificate
+  --no-color            Disable color output
+  --version             Show version and exit
   --dangerously-write-paths  Write full paths. WARNING: Be careful here, you are pulling directories from an untrusted source
 ```
 
