@@ -22,6 +22,7 @@ type Application struct {
 	FileList              string
 	UrlList               string
 	Delay                 time.Duration
+	ForceDownload         bool
 	DisableSSL            bool
 	DangerouslyWritePaths bool
 	Combined              bool
@@ -39,6 +40,7 @@ func NewApplication() *Application {
 		SourceFile:            "",
 		SourceUrl:             "",
 		Delay:                 0,
+		ForceDownload:         false,
 		DisableSSL:            false,
 		DangerouslyWritePaths: false,
 		Combined:              false,
@@ -172,6 +174,13 @@ func (a *Application) loadList(filepath string) ([]string, error) {
 // @param filepath string
 // @return error
 func (a *Application) download(source, target string) error {
+	if _, err := os.Stat(target); err == nil {
+		// File already exist
+		if a.ForceDownload == false {
+			log.Info("Local cache: %s", source)
+			return nil
+		}
+	}
 	log.Info("Downloading: %s", source)
 	if err := makeDirIfNotExist(filepath.Dir(target)); err != nil {
 		return err

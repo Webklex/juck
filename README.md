@@ -12,8 +12,9 @@ Usage of juck:
   --file      string    Target sourcemap file path
   --file-list string    File path of a file containing a list of target source map file paths
   --url       string    Target sourcemap url
-  --delay     duration  Delay between two requests. Only applies if --url-list is used
   --url-list  string    File path of a file containing a list of target source map urls
+  --force               Force to download and overwrite local sourcemap
+  --delay     duration  Delay between two requests. Only applies if --url-list is used
   --output    string    Directory to output from sourcemap to (default "./output")
   --combined            Combine all source files into one
   --disable-ssl         Don't verify the site's SSL certificate

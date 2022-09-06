@@ -25,6 +25,7 @@ func main() {
 	flag.CommandLine.StringVar(&a.SourceFile, "file", a.SourceFile, "Target sourcemap file path")
 	flag.CommandLine.StringVar(&a.SourceUrl, "url", a.SourceUrl, "Target sourcemap url")
 	flag.CommandLine.DurationVar(&a.Delay, "delay", a.Delay, "Delay between two requests. Only applies if --url-list is used")
+	flag.CommandLine.BoolVar(&a.ForceDownload, "force", a.ForceDownload, "Force to download and overwrite local sourcemap")
 	flag.CommandLine.BoolVar(&a.Combined, "combined", a.Combined, "Combine all source files into one")
 	flag.CommandLine.BoolVar(&a.DisableSSL, "disable-ssl", a.DisableSSL, "Don't verify the site's SSL certificate")
 	flag.CommandLine.BoolVar(&a.DangerouslyWritePaths, "dangerously-write-paths", a.DangerouslyWritePaths, "Write full paths. WARNING: Be careful here, you are pulling directories from an untrusted source")
