@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -83,7 +84,7 @@ func (a *Application) verify() error {
 		} else if len(list) == 0 {
 			return errors.New("url list file is empty")
 		}
-		for i, _url := range list {
+		for _, _url := range list {
 			u, err := url.Parse(_url)
 			if err != nil {
 				return err
@@ -91,7 +92,7 @@ func (a *Application) verify() error {
 			if strings.HasSuffix(u.Path, ".js") {
 				u.Path = u.Path + ".map"
 			}
-			filename := path.Join(a.OutputDir, fmt.Sprintf("source.%d.js.map", i))
+			filename := path.Join(a.OutputDir, "sourcemaps", SanitizePath(filepath.Base(u.Path)))
 			if err := a.download(u.String(), filename); err != nil {
 				log.Error(err)
 			} else {
@@ -129,7 +130,7 @@ func (a *Application) verify() error {
 			u.Path = u.Path + ".map"
 		}
 
-		a.SourceFile = path.Join(a.OutputDir, "source.js.map")
+		a.SourceFile = path.Join(a.OutputDir, "sourcemaps", SanitizePath(filepath.Base(u.Path)))
 		if err := a.download(u.String(), a.SourceFile); err != nil {
 			return err
 		}
