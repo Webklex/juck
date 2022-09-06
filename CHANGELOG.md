@@ -7,10 +7,12 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 
 ## [UNRELEASED]
 ### Fixed
-- NaN
+- Add suffix to indirect resource references
 
 ### Added
-- NaN
+- Delay downloads (e.g.: --delay 3s)
+- Download sourcemaps to `{output}/sourcemaps`
+- Download log added
 
 ### Breaking changes
 - NaN
