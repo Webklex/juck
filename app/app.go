@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 )
 
 type Application struct {
@@ -19,6 +20,7 @@ type Application struct {
 	SourceUrl             string
 	FileList              string
 	UrlList               string
+	Delay                 time.Duration
 	DisableSSL            bool
 	DangerouslyWritePaths bool
 	Combined              bool
@@ -35,6 +37,7 @@ func NewApplication() *Application {
 		OutputDir:             path.Join(dir, "output"),
 		SourceFile:            "",
 		SourceUrl:             "",
+		Delay:                 0,
 		DisableSSL:            false,
 		DangerouslyWritePaths: false,
 		Combined:              false,
@@ -93,6 +96,9 @@ func (a *Application) verify() error {
 				log.Error(err)
 			} else {
 				a.sources = append(a.sources, filename)
+			}
+			if a.Delay > 0 {
+				time.Sleep(a.Delay)
 			}
 		}
 	}
