@@ -103,9 +103,6 @@ func (a *Application) verify() error {
 			} else {
 				a.sources = append(a.sources, filename)
 			}
-			if a.Delay > 0 {
-				time.Sleep(a.Delay)
-			}
 		}
 	}
 	if a.FileList != "" {
@@ -126,6 +123,9 @@ func (a *Application) verify() error {
 	}
 
 	if a.SourceUrl != "" {
+		// Disable delay - there is only one file to be downloaded
+		a.Delay = 0
+
 		// Download source
 		u, err := url.Parse(a.SourceUrl)
 		if err != nil {
@@ -194,7 +194,14 @@ func (a *Application) download(source, target string) error {
 		_ = os.Remove(target)
 		return err
 	}
-	defer out.Close()
+	defer func(f *os.File) {
+		if err := f.Close(); err != nil {
+			log.Error(err)
+		}
+		if a.Delay > 0 {
+			time.Sleep(a.Delay)
+		}
+	}(out)
 
 	// Get the data
 	resp, err := http.Get(source)
