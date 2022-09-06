@@ -42,6 +42,7 @@ func NewExtractor(dir string) *Extractor {
 // @param filename string
 // @return error
 func (e *Extractor) Extract(filename string) error {
+	log.Info("Extracting: %s", filename)
 	err := e.load(filename)
 	if err != nil {
 		return err
@@ -62,7 +63,7 @@ func (e *Extractor) Extract(filename string) error {
 		}
 		targetFile = path.Join(e.dir, SanitizePath(targetFile))
 		if err := makeDirIfNotExist(filepath.Dir(targetFile)); err != nil {
-			log.Error(err)
+			log.Error("Failed to create directory \"%s\": %s", targetFile, err.Error())
 		}
 		tfh, err = os.OpenFile(targetFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 		if err != nil {
@@ -88,25 +89,25 @@ func (e *Extractor) Extract(filename string) error {
 			sourcePath = e.sources[i]
 		}
 		if content == "" {
-			log.Warning("skipping %s -  no content", sourcePath)
+			log.Warning("Skipping %s -  no content", sourcePath)
 			continue
 		}
 		if ext := filepath.Ext(sourcePath); ext == "" {
 			sourcePath = sourcePath + ".js"
 		}
 		if err := makeDirIfNotExist(filepath.Dir(sourcePath)); err != nil {
-			log.Error(err)
+			log.Error("Failed to create directory \"%s\": %s", sourcePath, err.Error())
 		} else {
 
 			f, err := os.OpenFile(sourcePath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 
 			if err != nil {
-				log.Error(err)
+				log.Error("Failed to open file \"%s\": %s", sourcePath, err.Error())
 			} else {
 				defer f.Close()
 				data, err := ioutil.ReadAll(f)
 				if err != nil {
-					log.Error(err)
+					log.Error("Failed to read file \"%s\": %s", sourcePath, err.Error())
 				} else {
 					if strings.Contains(string(data), content) == false {
 						if e.combined {
@@ -115,12 +116,13 @@ func (e *Extractor) Extract(filename string) error {
 							}
 						}
 						if _, err := f.WriteString(content); err != nil {
+							log.Error("Failed to write to file \"%s\": %s", sourcePath, err.Error())
 							log.Error(err)
 						} else {
 							log.Success("Wrote to: %s", sourcePath)
 						}
 					} else {
-						log.Info("skipping %s -  content already known", sourcePath)
+						log.Info("Skipping %s -  content already known", sourcePath)
 					}
 				}
 			}
