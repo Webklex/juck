@@ -7,6 +7,17 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 
 ## [UNRELEASED]
 ### Fixed
+- NaN
+
+### Added
+- NaN
+
+### Breaking changes
+- NaN
+
+
+## [1.1.0] - 2022-09-09
+### Fixed
 - Add suffix to indirect resource references
 - Ignore empty urls
 
@@ -20,6 +31,7 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 
 ### Breaking changes
 - NaN
+
 
 ## [1.0.0] - 2022-09-06
 Initial release
