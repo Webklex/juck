@@ -15,6 +15,7 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 - Download sourcemaps to `{output}/sourcemaps`
 - Download log added
 - Local sourcemap cache added
+- Optionally only use cached files
 
 ### Breaking changes
 - NaN

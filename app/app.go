@@ -24,6 +24,7 @@ type Application struct {
 	Delay                 time.Duration
 	ForceDownload         bool
 	DisableSSL            bool
+	LocalOnly             bool
 	DangerouslyWritePaths bool
 	Combined              bool
 	sources               []string
@@ -44,6 +45,7 @@ func NewApplication() *Application {
 		DisableSSL:            false,
 		DangerouslyWritePaths: false,
 		Combined:              false,
+		LocalOnly:             false,
 		sources:               make([]string, 0),
 	}
 }
@@ -183,6 +185,9 @@ func (a *Application) download(source, target string) error {
 			log.Info("Local cache: %s", source)
 			return nil
 		}
+	}
+	if a.LocalOnly {
+		return errors.New("local only mode is active")
 	}
 	log.Info("Downloading: %s", source)
 	if err := makeDirIfNotExist(filepath.Dir(target)); err != nil {
