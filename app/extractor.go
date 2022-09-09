@@ -41,18 +41,25 @@ func NewExtractor(dir string) *Extractor {
 // @receiver e *Extractor
 // @param filename string
 // @return error
-func (e *Extractor) Extract(filename string) error {
+func (e *Extractor) Extract(filename string) (nodeModules []string, err error) {
 	log.Info("Extracting: %s", filename)
-	err := e.load(filename)
-	if err != nil {
-		return err
+
+	if err = e.load(filename); err != nil {
+		return
 	}
 
-	if err := e.parseSources(); err != nil {
-		return err
+	if err = e.parseSources(); err != nil {
+		return
 	}
-	if err := e.parseContents(); err != nil {
-		return err
+	if err = e.parseContents(); err != nil {
+		return
+	}
+
+	if err = makeDirIfNotExist(path.Join(e.dir, "combined")); err != nil {
+		return
+	}
+	if err = makeDirIfNotExist(path.Join(e.dir, "sources")); err != nil {
+		return
 	}
 
 	targetFile := "combined.js"
@@ -61,13 +68,13 @@ func (e *Extractor) Extract(filename string) error {
 		if tf, ok := e.data["file"]; ok && tf != "" {
 			targetFile = tf.(string)
 		}
-		targetFile = path.Join(e.dir, SanitizePath(targetFile))
+		targetFile = path.Join(e.dir, "combined", SanitizePath(targetFile))
 		if err := makeDirIfNotExist(filepath.Dir(targetFile)); err != nil {
 			log.Error("Failed to create directory \"%s\": %s", targetFile, err.Error())
 		}
 		tfh, err = os.OpenFile(targetFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 		if err != nil {
-			return err
+			return
 		}
 	}
 
@@ -84,7 +91,7 @@ func (e *Extractor) Extract(filename string) error {
 	}
 
 	for i, content := range e.contents {
-		sourcePath := path.Join(e.dir, fmt.Sprintf("undefined-%d.js", i))
+		sourcePath := path.Join(e.dir, "sources", fmt.Sprintf("undefined-%d.js", i))
 		if i < sc {
 			sourcePath = e.sources[i]
 		}
@@ -95,41 +102,75 @@ func (e *Extractor) Extract(filename string) error {
 		if ext := filepath.Ext(sourcePath); ext == "" {
 			sourcePath = sourcePath + ".js"
 		}
+
+		if name := e.getModuleName(sourcePath); name != "" {
+			nodeModules = append(nodeModules, name)
+		}
+
 		if err := makeDirIfNotExist(filepath.Dir(sourcePath)); err != nil {
 			log.Error("Failed to create directory \"%s\": %s", sourcePath, err.Error())
 		} else {
+			e.saveSource(sourcePath, content, tfh)
+		}
+	}
+	return
+}
 
-			f, err := os.OpenFile(sourcePath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
-
-			if err != nil {
-				log.Error("Failed to open file \"%s\": %s", sourcePath, err.Error())
-			} else {
-				defer f.Close()
-				data, err := ioutil.ReadAll(f)
-				if err != nil {
-					log.Error("Failed to read file \"%s\": %s", sourcePath, err.Error())
-				} else {
-					if strings.Contains(string(data), content) == false {
-						if e.combined {
-							if _, err := tfh.WriteString(fmt.Sprintf("\n/**\nRestored: %s\n**/\n\n%s\n\n", sourcePath, content)); err != nil {
-								log.Error(err)
-							}
-						}
-						if _, err := f.WriteString(content); err != nil {
-							log.Error("Failed to write to file \"%s\": %s", sourcePath, err.Error())
-							log.Error(err)
-						} else {
-							log.Success("Wrote to: %s", sourcePath)
-						}
-					} else {
-						log.Info("Skipping %s -  content already known", sourcePath)
-					}
+func (e *Extractor) getModuleName(sourcePath string) string {
+	if i := strings.Index(sourcePath, "node_modules"); i >= 0 {
+		if len(sourcePath) > i+13 {
+			parts := strings.SplitN(sourcePath[i+13:], "/", 3)
+			if len(parts) == 3 {
+				author := parts[0]
+				repository := parts[1]
+				reference := parts[2]
+				if author[0:1] == "@" {
+					log.Success("Node module discovered: %s/%s (%s)", author, repository, reference)
+					return strings.Join([]string{author, repository}, "/")
 				}
+				log.Success("Node module discovered: %s (%s/%s)", author, repository, reference)
+				return author
 			}
 		}
 	}
+	return ""
+}
 
-	return nil
+//
+// saveSource
+// @Description: Save a given source file
+// @receiver e *Extractor
+// @param sourcePath string
+// @param content string
+// @param tfh *os.File
+func (e *Extractor) saveSource(sourcePath, content string, tfh *os.File) {
+	f, err := os.OpenFile(sourcePath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
+
+	if err != nil {
+		log.Error("Failed to open file \"%s\": %s", sourcePath, err.Error())
+	} else {
+		defer f.Close()
+		data, err := ioutil.ReadAll(f)
+		if err != nil {
+			log.Error("Failed to read file \"%s\": %s", sourcePath, err.Error())
+		} else {
+			if strings.Contains(string(data), content) == false {
+				if e.combined {
+					if _, err := tfh.WriteString(fmt.Sprintf("\n/**\nRestored: %s\n**/\n\n%s\n\n", sourcePath, content)); err != nil {
+						log.Error(err)
+					}
+				}
+				if _, err := f.WriteString(content); err != nil {
+					log.Error("Failed to write to file \"%s\": %s", sourcePath, err.Error())
+					log.Error(err)
+				} else {
+					log.Success("Wrote to: %s", sourcePath)
+				}
+			} else {
+				log.Info("Skipping %s -  content already known", sourcePath)
+			}
+		}
+	}
 }
 
 //
@@ -157,7 +198,7 @@ func (e *Extractor) parseSources() error {
 	}
 	for _, s := range sources {
 		if str, ok := s.(string); ok && str != "" {
-			str = path.Join(e.dir, SanitizePath(str))
+			str = path.Join(e.dir, "sources", SanitizePath(str))
 			e.sources = append(e.sources, str)
 		}
 	}

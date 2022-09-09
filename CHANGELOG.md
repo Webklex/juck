@@ -16,6 +16,7 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 - Download log added
 - Local sourcemap cache added
 - Optionally only use cached files
+- Search for possible node module dependencies
 
 ### Breaking changes
 - NaN

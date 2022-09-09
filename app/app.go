@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -60,13 +61,35 @@ func (a *Application) Run() error {
 		return err
 	}
 
+	var nodeModules []string
 	for _, source := range a.sources {
 		e := NewExtractor(a.OutputDir)
 		e.Combine(a.Combined)
-		if err := e.Extract(source); err != nil {
+		if nm, err := e.Extract(source); err != nil {
 			log.Error(err)
+		} else {
+			nodeModules = append(nodeModules, nm...)
 		}
 	}
+
+	nodeModules = uniqueStringList(nodeModules)
+	sort.Strings(nodeModules)
+	log.Info("Discovered node modules: %d", len(nodeModules))
+	for _, name := range nodeModules {
+		log.Info("\t%s", name)
+	}
+
+	fh, err := os.OpenFile(path.Join(a.OutputDir, "node_modules.txt"), os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
+	for _, name := range nodeModules {
+		if _, err := fh.WriteString(name + "\n"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -254,4 +277,22 @@ func makeDirIfNotExist(dirName string) error {
 		return nil
 	}
 	return err
+}
+
+func uniqueStringList(list []string) (uniqueList []string) {
+	for _, s := range list {
+		if inStringList(uniqueList, s) == false {
+			uniqueList = append(uniqueList, s)
+		}
+	}
+	return
+}
+
+func inStringList(list []string, target string) bool {
+	for _, s := range list {
+		if s == target {
+			return true
+		}
+	}
+	return false
 }
