@@ -1,9 +1,12 @@
 package app
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"github.com/webklex/juck/log"
+	"github.com/webklex/juck/npm"
+	"github.com/webklex/juck/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -61,25 +64,51 @@ func (a *Application) Run() error {
 		return err
 	}
 
-	var nodeModules []string
+	var coreModules []string
 	for _, source := range a.sources {
 		e := NewExtractor(a.OutputDir)
 		e.Combine(a.Combined)
 		if nm, err := e.Extract(source); err != nil {
 			log.Error(err)
 		} else {
-			nodeModules = append(nodeModules, nm...)
+			coreModules = append(coreModules, nm...)
 		}
 	}
 
-	nodeModules = uniqueStringList(nodeModules)
-	sort.Strings(nodeModules)
-	log.Info("Discovered node modules: %d", len(nodeModules))
-	for _, name := range nodeModules {
-		log.Info("\t%s", name)
-	}
+	n := npm.NewNpmRegistry()
+	coreModules = utils.UniqueStringList(coreModules)
+	sort.Strings(coreModules)
+
+	log.Info("Discovered node modules: %d", len(coreModules))
 
 	fh, err := os.OpenFile(path.Join(a.OutputDir, "node_modules.txt"), os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
+	for _, name := range coreModules {
+		if _, err := fh.WriteString(name + "\n"); err != nil {
+			return err
+		}
+	}
+
+	nodeModules := coreModules
+	nmc := len(nodeModules)
+	for _, name := range coreModules {
+		log.Info("Analyzing %s", name)
+		if dependencies, _ := n.Dependencies(name, nodeModules...); dependencies != nil {
+			nodeModules = utils.UniqueStringList(dependencies)
+			if delta := len(nodeModules) - nmc; delta > 0 {
+				log.Info("\t%d new dependencies discovered", delta)
+				nmc = nmc + delta
+			}
+		}
+	}
+
+	sort.Strings(nodeModules)
+	log.Info("Discovered node dependencies: %d", len(nodeModules))
+
+	fh, err = os.OpenFile(path.Join(a.OutputDir, "dependencies.txt"), os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
@@ -139,7 +168,7 @@ func (a *Application) verify() error {
 		}
 
 		for _, filename := range list {
-			if _, err := os.Stat(a.SourceFile); errors.Is(err, os.ErrNotExist) {
+			if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
 				log.Error(err)
 			} else {
 				a.sources = append(a.sources, filename)
@@ -277,22 +306,4 @@ func makeDirIfNotExist(dirName string) error {
 		return nil
 	}
 	return err
-}
-
-func uniqueStringList(list []string) (uniqueList []string) {
-	for _, s := range list {
-		if inStringList(uniqueList, s) == false {
-			uniqueList = append(uniqueList, s)
-		}
-	}
-	return
-}
-
-func inStringList(list []string, target string) bool {
-	for _, s := range list {
-		if s == target {
-			return true
-		}
-	}
-	return false
 }
