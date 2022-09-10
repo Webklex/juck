@@ -10,12 +10,22 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 - NaN
 
 ### Added
-- Verify npm package names
-- Fetch **all** dependencies
-- Accept variable targets (filename or url) from stdin
+- NaN
 
 ### Breaking changes
 - NaN
+
+
+## [1.2.0] - 2022-09-10
+### Added
+- Verify npm package names
+- Fetch **all** dependencies
+- Accept variable targets (filename or url) from stdin
+- Log level support added to suppress noise
+- Also looks for css source maps
+
+### Breaking changes
+- Output folder content and structure has changed. All discovered sources are now inside a `sources` folder within the given output folder.
 
 
 ## [1.1.0] - 2022-09-09
