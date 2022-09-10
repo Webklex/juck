@@ -1,10 +1,11 @@
 # JS Unpacker
-This program attempts to harvest as much information as possible from javascript source maps.
+This program attempts to harvest as much information as possible from javascript and css source maps.
 Works with both, local files and urls. See [output](#output) for additional detail. 
 
 ```bash
 go install github.com/webklex/juck
 ```
+
 
 ## Usage
 ```bash
@@ -16,6 +17,7 @@ Usage of juck:
   --force               Force to download and overwrite local sourcemap
   --delay     duration  Delay between two requests. Only applies if --url-list is used
   --output    string    Directory to output from sourcemap to (default "./output")
+  --log       integer   Set the log mode (0 = all, 1 = success, 2 = warning, 3 = statistic, 4 = error) (default "0")
   --combined            Combine all source files into one
   --disable-ssl         Don't verify the site's SSL certificate
   --no-color            Disable color output
@@ -25,15 +27,14 @@ Usage of juck:
 
 Analyze a single local file:
 ```bash
-./juck --file ./source.js.map
+juck --file ./source.js.map
 ```
 
 Analyze a single url:
 ```bash
-./juck --url https://example.com/assets/some_file.js
+juck --url https://example.com/assets/some_file.js
 ```
 > Note: you don't have to apply a .map - it gets added automatically if it is missing.
-
 
 Analyze a file containing many urls and delay each request by 3 seconds:
 ```bash
@@ -41,19 +42,25 @@ cat ./url_list.txt
 https://example.com/assets/js/some_file.js
 https://example.com/some_other_file.js
 ...
-```
+
 ```bash
-./juck --url-list ./url_list.txt --delay 3s
+juck --url-list ./url_list.txt --delay 3s
 ```
 
 Analyze piped stdin:
 ```bash
-echo "https://example.com/assets/js/some_file.js" | ./juck
+echo "https://example.com/assets/js/some_file.js" | juck
 ```
 ..or:
 ```bash
-echo "./source.js.map" | ./juck
+echo "./source.js.map" | juck
 ```
+
+Example pipeline to search for old forgotten maps:
+```bash
+gau example.com --subs | juck
+```
+
 
 ## Output
 By default, the output is stored in a folder called `output` placed within your current working directory.
@@ -78,16 +85,20 @@ cd juck
 ./build.sh
 ```
 
+
 ## Security
 If you discover any security related issues, please email github@webklex.com instead of using the issue tracker.
+
 
 ## Credits
 - [Webklex][link-author]
 - [rarecoil/unwebpack-sourcemap](https://github.com/rarecoil/unwebpack-sourcemap)
 - [All Contributors][link-contributors]
 
+
 ## License
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
 
 [link-author]: https://github.com/webklex
 [link-contributors]: https://github.com/webklex/juck/graphs/contributors
