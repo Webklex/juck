@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/webklex/juck/log"
+	"github.com/webklex/juck/npm"
 	"io/ioutil"
 	"os"
 	"path"
@@ -18,6 +19,7 @@ type Extractor struct {
 	sources  []string
 	contents []string
 	combined bool
+	npm      *npm.Npm
 }
 
 //
@@ -32,6 +34,7 @@ func NewExtractor(dir string) *Extractor {
 		sources:  make([]string, 0),
 		contents: make([]string, 0),
 		combined: false,
+		npm:      npm.NewNpmRegistry(),
 	}
 }
 
@@ -124,12 +127,52 @@ func (e *Extractor) getModuleName(sourcePath string) string {
 				author := parts[0]
 				repository := parts[1]
 				reference := parts[2]
+
+				if r, _ := e.npm.Get(strings.Join([]string{author, repository}, "/")); r == nil {
+					if r, _ = e.npm.Get(author); r != nil {
+						log.Success("Node module discovered: %s (%s/%s)", r.Name(), repository, reference)
+						return r.Name()
+					}
+				} else if r != nil {
+					log.Success("Node module discovered: %s (%s)", r.Name(), reference)
+					return r.Name()
+				}
+
 				if author[0:1] == "@" {
 					log.Success("Node module discovered: %s/%s (%s)", author, repository, reference)
 					return strings.Join([]string{author, repository}, "/")
 				}
 				log.Success("Node module discovered: %s (%s/%s)", author, repository, reference)
 				return author
+			} else if parts = strings.SplitN(sourcePath[i+13:], "/", 2); len(parts) == 2 {
+				author := parts[0]
+				repository := parts[1]
+
+				if r, _ := e.npm.Get(strings.Join([]string{author, repository}, "/")); r == nil {
+					if r, _ = e.npm.Get(author); r != nil {
+						log.Success("Node module discovered: %s (%s)", r.Name(), repository)
+						return r.Name()
+					}
+				} else if r != nil {
+					log.Success("Node module discovered: %s", r.Name())
+					return r.Name()
+				}
+
+				if author[0:1] == "@" {
+					log.Success("Node module discovered: %s/%s", author, repository)
+					return strings.Join([]string{author, repository}, "/")
+				}
+				log.Success("Node module discovered: %s (%s)", author, repository)
+				return author
+			} else {
+				r, _ := e.npm.Get(sourcePath[i+13:])
+				if r != nil {
+					log.Success("Node module discovered: %s", r.Name())
+					return r.Name()
+				}
+
+				log.Success("Node module discovered: %s", sourcePath[i+13:])
+				return sourcePath[i+13:]
 			}
 		}
 	}
