@@ -64,6 +64,7 @@ func (a *Application) Run() error {
 		return err
 	}
 
+	log.Statistic("Verified sources: %d", len(a.sources))
 	var coreModules []string
 	for _, source := range a.sources {
 		e := NewExtractor(a.OutputDir)
@@ -79,7 +80,7 @@ func (a *Application) Run() error {
 	coreModules = utils.UniqueStringList(coreModules)
 	sort.Strings(coreModules)
 
-	log.Info("Discovered node modules: %d", len(coreModules))
+	log.Statistic("Discovered node modules: %d", len(coreModules))
 
 	fh, err := os.OpenFile(path.Join(a.OutputDir, "node_modules.txt"), os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -106,7 +107,7 @@ func (a *Application) Run() error {
 	}
 
 	sort.Strings(nodeModules)
-	log.Info("Discovered node dependencies: %d", len(nodeModules))
+	log.Statistic("Discovered node dependencies: %d", len(nodeModules))
 
 	fh, err = os.OpenFile(path.Join(a.OutputDir, "dependencies.txt"), os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -137,100 +138,46 @@ func (a *Application) verify() error {
 		list, err := a.loadList(a.UrlList)
 		if err != nil {
 			return err
-		} else if len(list) == 0 {
-			return errors.New("url list file is empty")
 		}
-		for _, _url := range list {
-			if _url == "" {
-				continue
-			}
-			u, err := url.Parse(_url)
-			if err != nil {
-				return err
-			}
-			if strings.HasSuffix(u.Path, ".js") {
-				u.Path = u.Path + ".map"
-			}
-			filename := path.Join(a.OutputDir, "sourcemaps", SanitizePath(filepath.Base(u.Path)))
-			if err := a.download(u.String(), filename); err != nil {
-				log.Error(err)
-			} else {
-				a.sources = append(a.sources, filename)
-			}
-		}
+		a.downloadList(list)
 	}
 	if a.FileList != "" {
 		list, err := a.loadList(a.FileList)
 		if err != nil {
 			return err
-		} else if len(list) == 0 {
-			return errors.New("file list file is empty")
 		}
 
-		for _, filename := range list {
-			if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
-				log.Error(err)
-			} else {
-				a.sources = append(a.sources, filename)
-			}
-		}
+		a.loadLocalList(list)
 	}
 
 	if a.SourceUrl != "" {
 		// Disable delay - there is only one file to be downloaded
 		a.Delay = 0
-
-		// Download source
-		u, err := url.Parse(a.SourceUrl)
-		if err != nil {
-			return err
-		}
-		if strings.HasSuffix(u.Path, ".js") {
-			u.Path = u.Path + ".map"
-		}
-
-		a.SourceFile = path.Join(a.OutputDir, "sourcemaps", SanitizePath(filepath.Base(u.Path)))
-		if err := a.download(u.String(), a.SourceFile); err != nil {
-			return err
-		}
+		a.downloadList([]string{a.SourceUrl})
 	}
 
 	if a.SourceFile != "" {
-		if _, err := os.Stat(a.SourceFile); errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		a.sources = []string{a.SourceFile}
+		a.loadLocalList([]string{a.SourceFile})
 	} else if len(a.sources) == 0 {
 		sc := bufio.NewScanner(os.Stdin)
 		for sc.Scan() {
 			source := sc.Text()
-			if u, err := url.ParseRequestURI(source); err == nil {
-				if strings.HasSuffix(u.Path, ".js") {
-					u.Path = u.Path + ".map"
-				}
-				filename := path.Join(a.OutputDir, "sourcemaps", SanitizePath(filepath.Base(u.Path)))
-				if err := a.download(u.String(), filename); err != nil {
-					log.Error(err)
-				} else {
-					a.sources = append(a.sources, filename)
-				}
+			if _, err := url.ParseRequestURI(source); err == nil {
+				a.downloadList([]string{source})
 			} else {
-				if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
-					log.Error(err)
-				} else {
-					a.sources = append(a.sources, source)
-				}
+				a.loadLocalList([]string{source})
 			}
 		}
 
 		if err = sc.Err(); err != nil {
 			return err
 		}
-
-		if len(a.sources) == 0 {
-			return errors.New("no target specified. please use --file, --url or stdin and provide at least one target")
-		}
 	}
+
+	if len(a.sources) == 0 {
+		return errors.New("no target specified. please use --file, --url or stdin and provide at least one target")
+	}
+	a.sources = utils.UniqueStringList(a.sources)
 
 	return nil
 }
@@ -247,8 +194,47 @@ func (a *Application) loadList(filepath string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	list := strings.Split(string(byteValue), "\n")
 
-	return strings.Split(string(byteValue), "\n"), nil
+	if len(list) == 0 {
+		return nil, errors.New("list file is empty")
+	}
+
+	return list, nil
+}
+
+func (a *Application) loadLocalList(list []string) {
+	for _, filename := range list {
+		if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+			log.Error(err)
+			continue
+		}
+		a.sources = append(a.sources, filename)
+	}
+}
+
+func (a *Application) downloadList(list []string) {
+	for _, _url := range list {
+		if _url == "" {
+			continue
+		}
+		u, err := url.Parse(_url)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		if strings.HasSuffix(u.Path, ".js") || strings.HasSuffix(u.Path, ".css") {
+			u.Path = u.Path + ".map"
+		}
+		if strings.HasSuffix(u.Path, ".map") {
+			filename := path.Join(a.OutputDir, "sourcemaps", SanitizePath(filepath.Base(u.Path)))
+			if err := a.download(u.String(), filename); err != nil {
+				log.Error(err)
+			} else {
+				a.sources = append(a.sources, filename)
+			}
+		}
+	}
 }
 
 //
