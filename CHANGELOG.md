@@ -10,7 +10,9 @@ Updates should follow the [Keep a CHANGELOG](http://keepachangelog.com/) princip
 - NaN
 
 ### Added
-- NaN
+- Verify npm package names
+- Fetch **all** dependencies
+- Accept variable targets (filename or url) from stdin
 
 ### Breaking changes
 - NaN

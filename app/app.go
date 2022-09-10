@@ -201,7 +201,35 @@ func (a *Application) verify() error {
 		}
 		a.sources = []string{a.SourceFile}
 	} else if len(a.sources) == 0 {
-		return errors.New("no target specified. please use --file or --url and define a valid target")
+		sc := bufio.NewScanner(os.Stdin)
+		for sc.Scan() {
+			source := sc.Text()
+			if u, err := url.ParseRequestURI(source); err == nil {
+				if strings.HasSuffix(u.Path, ".js") {
+					u.Path = u.Path + ".map"
+				}
+				filename := path.Join(a.OutputDir, "sourcemaps", SanitizePath(filepath.Base(u.Path)))
+				if err := a.download(u.String(), filename); err != nil {
+					log.Error(err)
+				} else {
+					a.sources = append(a.sources, filename)
+				}
+			} else {
+				if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
+					log.Error(err)
+				} else {
+					a.sources = append(a.sources, source)
+				}
+			}
+		}
+
+		if err = sc.Err(); err != nil {
+			return err
+		}
+
+		if len(a.sources) == 0 {
+			return errors.New("no target specified. please use --file, --url or stdin and provide at least one target")
+		}
 	}
 
 	return nil
