@@ -84,8 +84,8 @@ func (e *Extractor) Extract(filename string) (nodeModules []string, err error) {
 	sc := len(e.sources)
 	cc := len(e.contents)
 
-	log.Info("Discovered sources: %d", sc)
-	log.Info("Discovered contents: %d", cc)
+	log.Statistic("Discovered sources: %d", sc)
+	log.Statistic("Discovered contents: %d", cc)
 
 	if sc > cc {
 		log.Warning("There are more sources than contents, filenames may not match content")
